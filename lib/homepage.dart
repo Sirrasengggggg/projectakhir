@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:projectakhir/profile.dart';
+import 'produk.dart'; // <-- SAYA TAMBAHKAN IMPORT INI
 
 // Mengubah StatelessWidget menjadi StatefulWidget karena perlu menyimpan state halaman aktif
 class HomePage extends StatefulWidget {
@@ -125,7 +126,10 @@ class _HomePageState extends State<HomePage> {
 
   // Widget untuk tampilan Produk
   Widget _buildProductContent() {
-    return Center(child: Text('Halaman Produk'));
+    //
+    // <-- DI SINI SAMBUNGANNYA
+    //
+    return ProdukPage(); // Mengembalikan widget Halaman Produk Anda
   }
 
   // Widget untuk tampilan Keranjang

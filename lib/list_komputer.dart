@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http; // Import package http
 import 'dart:convert'; // Import untuk json.decode
-import 'Model_Komputer.dart'; // <-- PERBAIKAN: Hanya import ini
+import 'Model_Komputer.dart'; // <-- PERBAIKAN: Nama file disesuaikan
 
 class ProdukPage extends StatefulWidget {
   const ProdukPage({super.key});
