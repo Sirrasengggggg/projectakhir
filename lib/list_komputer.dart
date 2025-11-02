@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'model_Komputer.dart'; // pastikan file model sesuai
+import 'model_Komputer.dart'; 
 
 class ListKomputer extends StatefulWidget {
   const ListKomputer({super.key});

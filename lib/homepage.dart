@@ -1,4 +1,3 @@
-// lib/homepage.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'produk.dart';
@@ -10,6 +9,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
+import 'package:geolocator/geolocator.dart';
 
 class HomePage extends StatefulWidget {
   final String username;
@@ -26,19 +26,21 @@ class _HomePageState extends State<HomePage> {
   static const double tokoLat = -7.766287535772006;
   static const double tokoLng = 110.42621336745788;
 
-  // 🔥 FLASH SALE VARIABLES
-  DateTime flashSaleStart = DateTime(2025, 11, 2, 19, 0, 0); // WIB
-  DateTime flashSaleEnd = DateTime(2025, 11, 2, 21, 0, 0); // WIB
+  DateTime flashSaleStart = DateTime(2025, 11, 2, 19, 0, 0);
+  DateTime flashSaleEnd = DateTime(2025, 11, 2, 21, 0, 0);
   late Timer _timer;
   Duration _remaining = Duration.zero;
-  String zonaTerpilih = 'WIB';
 
+  String zonaTerpilih = 'WIB';
   final Map<String, Duration> offsetZona = {
     'WIB': const Duration(hours: 0),
     'WITA': const Duration(hours: 1),
     'WIT': const Duration(hours: 2),
     'London': const Duration(hours: -7),
   };
+
+  double? jarakUser;
+  bool _isLoadingLokasi = false;
 
   @override
   void initState() {
@@ -48,16 +50,15 @@ class _HomePageState extends State<HomePage> {
       const Duration(seconds: 1),
       (_) => _updateCountdown(),
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _tanyaIzinLokasi());
   }
 
   void _updateCountdown() {
     final now = DateTime.now();
     setState(() {
-      if (now.isBefore(flashSaleEnd)) {
-        _remaining = flashSaleEnd.difference(now);
-      } else {
-        _remaining = Duration.zero;
-      }
+      _remaining = now.isBefore(flashSaleEnd)
+          ? flashSaleEnd.difference(now)
+          : Duration.zero;
     });
   }
 
@@ -67,17 +68,16 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  String _formatWaktu(DateTime waktu, String zona) {
-    final konversi = waktu.add(offsetZona[zona]!);
-    return DateFormat('HH:mm').format(konversi);
-  }
-
   String _formatCountdown(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     return "${twoDigits(duration.inHours)}:${twoDigits(duration.inMinutes.remainder(60))}:${twoDigits(duration.inSeconds.remainder(60))}";
   }
 
-  // 🛒 CART LOGIC
+  String _formatWaktu(DateTime waktu, String zona) {
+    final konversi = waktu.add(offsetZona[zona]!);
+    return DateFormat('HH:mm').format(konversi);
+  }
+
   void _onAddToCart(Map<String, dynamic> product) {
     setState(() {
       int idx = _cartItems.indexWhere((it) => it['name'] == product['name']);
@@ -125,22 +125,76 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Future<void> _tanyaIzinLokasi() async {
+    await Future.delayed(const Duration(seconds: 1));
+    final izin = await Geolocator.checkPermission();
+    if (izin == LocationPermission.denied ||
+        izin == LocationPermission.deniedForever) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Izin Lokasi Diperlukan'),
+            content: const Text(
+              'Aplikasi memerlukan akses lokasi untuk menampilkan jarak ke toko DigiSentral.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Nanti'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await _getUserLocation();
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
+                child: const Text('Izinkan'),
+              ),
+            ],
+          ),
+        );
+      }
+    } else {
+      _getUserLocation();
+    }
+  }
+
+  Future<void> _getUserLocation() async {
+    setState(() => _isLoadingLokasi = true);
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      setState(() => _isLoadingLokasi = false);
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.requestPermission();
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      setState(() => _isLoadingLokasi = false);
+      return;
+    }
+
+    final posisi = await Geolocator.getCurrentPosition();
+    final jarak = Geolocator.distanceBetween(
+      posisi.latitude,
+      posisi.longitude,
+      tokoLat,
+      tokoLng,
+    );
+
+    setState(() {
+      jarakUser = jarak / 1000;
+      _isLoadingLokasi = false;
+    });
+  }
+
   Future<void> _bukaGoogleMaps() async {
     final Uri googleUrl = Uri.parse(
       'https://www.google.com/maps/search/?api=1&query=$tokoLat,$tokoLng',
     );
-
     if (await canLaunchUrl(googleUrl)) {
       await launchUrl(googleUrl, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tidak dapat membuka Google Maps'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     }
   }
 
@@ -154,7 +208,7 @@ class _HomePageState extends State<HomePage> {
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F8),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(
           'DigiSentral',
@@ -175,7 +229,7 @@ class _HomePageState extends State<HomePage> {
         currentIndex: _selectedIndex,
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.black,
-        selectedItemColor: Colors.blueAccent,
+        selectedItemColor: Colors.white,
         unselectedItemColor: Colors.grey,
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
         onTap: (i) => setState(() => _selectedIndex = i),
@@ -198,217 +252,128 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 🧍‍♂️ Kartu sambutan
-          Card(
-            elevation: 4,
-            shape: RoundedRectangleBorder(
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
               borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.15),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.blue.shade100,
-                    child: const Icon(
-                      Icons.person,
-                      color: Colors.blue,
-                      size: 30,
-                    ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Selamat Datang di DigiSentral,',
+                  style: TextStyle(fontSize: 15, color: Colors.black54),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  widget.username,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
                   ),
-                  const SizedBox(width: 18),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Selamat datang di DigiSentral,',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                        Text(
-                          widget.username,
-                          style: const TextStyle(
-                            fontSize: 21,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-
           const SizedBox(height: 30),
-
-          // ⚡ FLASH SALE
-          Card(
-            elevation: 4,
-            color: Colors.orange.shade50,
-            shape: RoundedRectangleBorder(
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: const [
-                      Icon(
-                        Icons.local_fire_department,
-                        color: Colors.deepOrange,
-                      ),
-                      SizedBox(width: 10),
-                      Text(
-                        'Flash Sale Spesial DigiSentral',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.deepOrange,
-                        ),
-                      ),
-                    ],
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Flash Sale Spesial DigiSentral',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
                   ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'Mulai pada (zona default: WIB):',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    '🕒 WIB (Jakarta): ${_formatWaktu(flashSaleStart, 'WIB')}',
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      const Text(
-                        'Lihat waktu dalam zona: ',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      DropdownButton<String>(
-                        value: zonaTerpilih,
-                        items: offsetZona.keys.map((zona) {
-                          return DropdownMenuItem(
-                            value: zona,
-                            child: Text(zona),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() => zonaTerpilih = value!);
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '⏰ Waktu di $zonaTerpilih: ${_formatWaktu(flashSaleStart, zonaTerpilih)}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Mulai pada (zona default: WIB):',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 5),
+                Text('WIB (Jakarta): ${_formatWaktu(flashSaleStart, 'WIB')}'),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    const Text(
+                      'Lihat waktu dalam zona: ',
+                      style: TextStyle(fontSize: 15),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Divider(color: Colors.orange.shade200),
-                  Text(
-                    _remaining.inSeconds > 0
-                        ? '⏳ Waktu tersisa: ${_formatCountdown(_remaining)}'
-                        : '🎉 Flash Sale telah berakhir!',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.redAccent,
+                    DropdownButton<String>(
+                      value: zonaTerpilih,
+                      items: offsetZona.keys.map((zona) {
+                        return DropdownMenuItem(value: zona, child: Text(zona));
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() => zonaTerpilih = value!);
+                      },
                     ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Waktu di $zonaTerpilih: ${_formatWaktu(flashSaleStart, zonaTerpilih)}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
                   ),
-                  const SizedBox(height: 10),
-                  Center(
-                    child: ElevatedButton.icon(
-                      onPressed: _remaining.inSeconds > 0
-                          ? () {
-                              setState(() {
-                                _selectedIndex =
-                                    1; // 👉 langsung ke halaman Produk
-                              });
-                            }
-                          : null,
-                      icon: const Icon(Icons.shopping_bag),
-                      label: const Text('Ikuti Sekarang'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepOrange,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 10,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _remaining.inSeconds > 0
+                      ? 'Waktu tersisa: ${_formatCountdown(_remaining)}'
+                      : 'Flash Sale telah berakhir',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: _remaining.inSeconds > 0
+                        ? Colors.black
+                        : Colors.redAccent,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Center(
+                  child: ElevatedButton.icon(
+                    onPressed: _remaining.inSeconds > 0
+                        ? () => setState(() => _selectedIndex = 1)
+                        : null,
+                    icon: const Icon(Icons.shopping_bag),
+                    label: const Text('Ikuti Sekarang'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-
           const SizedBox(height: 30),
-
-          // Tentang DigiSentral
-          Card(
-            elevation: 3,
-            color: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.storefront,
-                        color: Colors.blueAccent,
-                        size: 28,
-                      ),
-                      SizedBox(width: 10),
-                      Text(
-                        'Tentang DigiSentral',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Divider(height: 24, thickness: 1.2, color: Colors.blueAccent),
-                  Text(
-                    'DigiSentral adalah toko elektronik modern yang menyediakan berbagai produk digital '
-                    'dan aksesoris gadget terkini. Kami berkomitmen memberikan layanan terbaik dan '
-                    'produk berkualitas tinggi untuk memenuhi kebutuhan pelanggan di era digital.',
-                    textAlign: TextAlign.justify,
-                    style: TextStyle(
-                      fontSize: 15.5,
-                      height: 1.6,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 30),
-
-          // Lokasi
           const Text(
             'Lokasi Toko Kami',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -420,38 +385,49 @@ class _HomePageState extends State<HomePage> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.grey.shade300),
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: FlutterMap(
-                options: const MapOptions(
-                  initialCenter: LatLng(tokoLat, tokoLng),
-                  initialZoom: 16,
-                ),
-                children: [
-                  TileLayer(
-                    urlTemplate:
-                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.example.projectakhir',
-                  ),
-                  MarkerLayer(
-                    markers: [
-                      Marker(
-                        point: const LatLng(tokoLat, tokoLng),
-                        width: 80,
-                        height: 80,
-                        child: const Icon(
-                          Icons.location_pin,
-                          color: Colors.red,
-                          size: 42,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+            child: FlutterMap(
+              options: const MapOptions(
+                initialCenter: LatLng(tokoLat, tokoLng),
+                initialZoom: 16,
               ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.example.projectakhir',
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: const LatLng(tokoLat, tokoLng),
+                      width: 80,
+                      height: 80,
+                      child: const Icon(
+                        Icons.location_pin,
+                        color: Colors.red,
+                        size: 42,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-
+          const SizedBox(height: 10),
+          if (_isLoadingLokasi)
+            const Center(child: CircularProgressIndicator())
+          else if (jarakUser != null)
+            Text(
+              'Jarak Anda ke toko: ${jarakUser!.toStringAsFixed(2)} km',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            )
+          else
+            const Text(
+              'Lokasi belum diizinkan',
+              style: TextStyle(color: Colors.grey),
+            ),
           const SizedBox(height: 16),
           Center(
             child: ElevatedButton.icon(
@@ -459,7 +435,7 @@ class _HomePageState extends State<HomePage> {
               icon: const Icon(Icons.map_outlined),
               label: const Text('Buka di Google Maps'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueAccent,
+                backgroundColor: Colors.black,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
@@ -471,32 +447,26 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
-
           const SizedBox(height: 30),
-
-          // Jam operasional
           const Text(
             'Jam Operasional',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: Colors.grey.shade100,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.blue.shade100),
             ),
             padding: const EdgeInsets.all(16),
             child: const Text(
-              '🕒 Buka: Senin - Sabtu\n'
-              '⏰ Jam: 09.00 pagi - 22.00 malam\n'
-              '📍 Tutup setiap hari Minggu',
-              style: TextStyle(fontSize: 15, height: 1.6),
+              'Buka: Senin - Sabtu\nJam: 09.00 - 22.00 WIB\nTutup: Minggu',
+              style: TextStyle(
+                fontSize: 15,
+                height: 1.6,
+                color: Colors.black87,
+              ),
             ),
           ),
         ],

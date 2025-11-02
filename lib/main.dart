@@ -1,17 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 import 'loginpage.dart';
 import 'homepage.dart';
 
-void main() async {
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  
+  tz.initializeTimeZones();
+
+  
   await Hive.initFlutter();
+  await Hive.openBox('users');
+  await Hive.openBox('session');
+  await Hive.openBox('history');
+  await Hive.openBox('profile');
 
-  await Hive.openBox('users'); // ✅ untuk user login
-  await Hive.openBox('session'); // ✅ untuk session aktif
-  await Hive.openBox('history'); // ✅ tambahkan ini untuk riwayat pembelian
+  
+  const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const initSettings = InitializationSettings(android: androidInit);
+  await flutterLocalNotificationsPlugin.initialize(initSettings);
 
-  // Cek session
+  
   final session = Hive.box('session');
   final savedEmail = session.get('email') as String?;
   final savedUsername = session.get('username') as String?;
@@ -34,7 +51,10 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'DigiSentral',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        scaffoldBackgroundColor: const Color(0xFFF4F6F8),
+      ),
       home: (initialUsername != null)
           ? HomePage(username: initialUsername!)
           : const LoginPage(),

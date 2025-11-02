@@ -14,7 +14,7 @@ class _CartPageState extends State<CartPage> {
   String selectedCurrency = 'IDR';
   double totalKonversi = 0.0;
 
-  // ✅ Kurs statis (offline)
+  
   final Map<String, double> rates = {
     'IDR': 1.0,
     'MYR': 3500.0,
@@ -22,7 +22,7 @@ class _CartPageState extends State<CartPage> {
     'SGD': 11700.0,
   };
 
-  // ✅ Simbol mata uang
+  
   String _getSymbol(String code) {
     switch (code) {
       case 'MYR':
@@ -36,7 +36,7 @@ class _CartPageState extends State<CartPage> {
     }
   }
 
-  // ✅ Format angka ke bentuk Rupiah
+  
   String formatHarga(double harga) {
     final formatter = NumberFormat.currency(
       locale: 'id_ID',
@@ -46,7 +46,7 @@ class _CartPageState extends State<CartPage> {
     return formatter.format(harga);
   }
 
-  // ✅ Hitung total harga di keranjang
+  
   double get totalHargaIDR {
     double total = 0.0;
     for (var item in widget.cartItems) {
@@ -57,7 +57,7 @@ class _CartPageState extends State<CartPage> {
     return total;
   }
 
-  // ✅ Hitung konversi otomatis
+  
   void _hitungKonversi() {
     final rate = rates[selectedCurrency] ?? 1.0;
     setState(() {
@@ -65,7 +65,7 @@ class _CartPageState extends State<CartPage> {
     });
   }
 
-  // ✅ Tambah dan kurang produk
+  
   void _tambahProduk(int index) {
     setState(() {
       widget.cartItems[index]['quantity'] += 1;
@@ -84,7 +84,7 @@ class _CartPageState extends State<CartPage> {
     });
   }
 
-  // ✅ Validasi sebelum pindah ke pembayaran
+ 
   void _goToPaymentPage() {
     if (widget.cartItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -120,31 +120,20 @@ class _CartPageState extends State<CartPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        title: const Text(
-          'DigiSentral',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.5,
-          ),
-        ),
-        centerTitle: true,
-      ),
+
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: double.infinity,
-            color: Colors.grey.shade300,
+            color: Colors.grey,
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
             child: const Text(
               'Keranjang Saya',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                color: Colors.white,
               ),
             ),
           ),
@@ -256,7 +245,7 @@ class _CartPageState extends State<CartPage> {
                   ),
           ),
 
-          // 🧮 Konversi & total harga
+          
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -337,7 +326,7 @@ class _CartPageState extends State<CartPage> {
                 ),
                 const SizedBox(height: 15),
 
-                // ✅ Tombol lanjut ke pembayaran
+                
                 SizedBox(
                   width: double.infinity,
                   height: 50,

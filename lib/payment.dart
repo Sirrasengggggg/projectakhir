@@ -25,6 +25,7 @@ class _PaymentPageState extends State<PaymentPage> {
   String? _selectedMethod;
   bool _isLoading = false;
 
+  
   String _formatPrice(double price) {
     final formatter = NumberFormat.currency(
       locale: 'id_ID',
@@ -34,19 +35,20 @@ class _PaymentPageState extends State<PaymentPage> {
     return formatter.format(price);
   }
 
+  
   Future<void> _pay() async {
-    // 🔴 Cegah pembayaran tanpa barang
+   
     if (widget.totalIDR <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Tidak ada barang di keranjang.'),
+          content: Text('Keranjang Anda masih kosong.'),
           backgroundColor: Colors.redAccent,
         ),
       );
       return;
     }
 
-    // 🔴 Cegah pembayaran tanpa memilih metode
+   
     if (_selectedMethod == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -57,13 +59,26 @@ class _PaymentPageState extends State<PaymentPage> {
       return;
     }
 
+    
     setState(() => _isLoading = true);
     await Future.delayed(const Duration(seconds: 2));
     setState(() => _isLoading = false);
 
-    // ✅ Simpan riwayat transaksi ke Hive
-    final box = await Hive.openBox('history');
-    box.add({
+   
+    if (!Hive.isBoxOpen('riwayat')) {
+      await Hive.openBox('riwayat');
+    }
+    final box = Hive.box('riwayat');
+
+    
+    final session = Hive.box('session');
+    final email = session.get('email');
+
+   
+    final List userRiwayat = box.get(email, defaultValue: []).cast<Map>();
+
+    
+    userRiwayat.add({
       'total': widget.totalIDR,
       'method': _selectedMethod!,
       'tanggal': DateFormat('dd MMM yyyy, HH:mm').format(DateTime.now()),
@@ -72,49 +87,65 @@ class _PaymentPageState extends State<PaymentPage> {
       'symbol': widget.symbol,
     });
 
-    // ✅ Popup sukses dan arahkan ke riwayat
-    if (mounted) {
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          title: Row(
-            children: const [
-              Icon(Icons.check_circle, color: Colors.green),
-              SizedBox(width: 8),
-              Text('Pembayaran Berhasil'),
-            ],
-          ),
-          content: Text(
-            'Pembayaran sebesar ${_formatPrice(widget.totalIDR)} berhasil menggunakan $_selectedMethod!',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const RiwayatPage()),
-                );
-              },
-              child: const Text('Lihat Riwayat'),
+    
+    await box.put(email, userRiwayat);
+
+   
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Row(
+          children: const [
+            Icon(Icons.check_circle, color: Colors.green, size: 28),
+            SizedBox(width: 8),
+            Text(
+              'Pembayaran Berhasil',
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ],
         ),
-      );
-    }
+        content: Text(
+          'Pembayaran sebesar ${_formatPrice(widget.totalIDR)} '
+          'berhasil menggunakan metode $_selectedMethod!',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const RiwayatPage()),
+              );
+            },
+            child: const Text(
+              'Lihat Riwayat',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.blueAccent,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
+  
   Widget _option(String label, IconData icon) {
     return ListTile(
       leading: Radio<String>(
         value: label,
         groupValue: _selectedMethod,
         onChanged: (v) => setState(() => _selectedMethod = v),
+        activeColor: Colors.blueAccent,
       ),
-      title: Text(label, style: const TextStyle(fontSize: 16)),
+      title: Text(
+        label,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+      ),
       trailing: Icon(icon, color: Colors.blueAccent),
     );
   }
@@ -143,21 +174,22 @@ class _PaymentPageState extends State<PaymentPage> {
               'Pilih Metode Pembayaran',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
 
-            // ✅ Tiga metode pembayaran
+            
             _option('Transfer Bank', Icons.account_balance),
             _option('GoPay', Icons.qr_code_2),
             _option('DANA', Icons.account_balance_wallet_outlined),
 
             const Spacer(),
 
-            // ✅ Total harga tampil di bawah
+           
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.grey.shade300),
               ),
               child: Column(
@@ -170,15 +202,19 @@ class _PaymentPageState extends State<PaymentPage> {
                   const SizedBox(height: 5),
                   Text(
                     '${_formatPrice(widget.totalIDR)} (IDR)',
-                    style: const TextStyle(fontSize: 16, color: Colors.black54),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.black87,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   if (widget.currency != 'IDR')
                     Text(
                       '${widget.symbol} ${widget.totalConverted.toStringAsFixed(2)} (${widget.currency})',
                       style: const TextStyle(
-                        fontSize: 16,
+                        fontSize: 15,
                         color: Colors.blueAccent,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                 ],
@@ -186,7 +222,7 @@ class _PaymentPageState extends State<PaymentPage> {
             ),
             const SizedBox(height: 16),
 
-            // ✅ Tombol Bayar Sekarang
+            
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -205,7 +241,11 @@ class _PaymentPageState extends State<PaymentPage> {
                       )
                     : const Text(
                         'Bayar Sekarang',
-                        style: TextStyle(fontSize: 16, color: Colors.white),
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
               ),
             ),

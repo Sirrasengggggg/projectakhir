@@ -1,4 +1,3 @@
-// lib/riwayat_page.dart
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
@@ -11,16 +10,73 @@ class RiwayatPage extends StatefulWidget {
 }
 
 class _RiwayatPageState extends State<RiwayatPage> {
-  late Box historyBox;
+  Box? riwayatBox;
 
   @override
   void initState() {
     super.initState();
-    historyBox = Hive.box('history');
+    _loadBox();
+  }
+
+  
+  Future<void> _loadBox() async {
+    if (!Hive.isBoxOpen('riwayat')) {
+      await Hive.openBox('riwayat');
+    }
+    setState(() {
+      riwayatBox = Hive.box('riwayat');
+    });
+  }
+
+ 
+  Future<void> _clearUserHistory(String email) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Hapus Semua Riwayat?'),
+        content: const Text(
+          'Apakah kamu yakin ingin menghapus semua riwayat pembelian kamu?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await riwayatBox!.put(email, []);
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Semua riwayat kamu sudah dihapus.')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (riwayatBox == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    
+    final session = Hive.box('session');
+    final email = session.get('email');
+
+   
+    final data = riwayatBox!.get(email, defaultValue: []);
+    List<Map<String, dynamic>> userHistory = [];
+
+    if (data is List) {
+      userHistory = data.map((e) => Map<String, dynamic>.from(e)).toList();
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
@@ -29,55 +85,59 @@ class _RiwayatPageState extends State<RiwayatPage> {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        iconTheme: const IconThemeData(
-          color: Colors.white,
-        ),
         backgroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          if (userHistory.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.delete_forever, color: Colors.white),
+              tooltip: 'Hapus Semua Riwayat',
+              onPressed: () => _clearUserHistory(email),
+            ),
+        ],
       ),
-      body: ValueListenableBuilder(
-        valueListenable: historyBox.listenable(),
-        builder: (context, Box box, _) {
-          if (box.isEmpty) {
-            return const Center(
+      body: userHistory.isEmpty
+          ? const Center(
               child: Text(
                 'Belum ada riwayat pembelian.',
                 style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
-            );
-          }
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: userHistory.length,
+              itemBuilder: (context, index) {
+                final item = userHistory.reversed.toList()[index];
+                final total = item['total'] ?? 0;
+                final metode = item['method'] ?? '-';
+                final tanggal = item['tanggal'] ?? '-';
+                final currency = item['mataUang'] ?? 'IDR';
+                final symbol = item['symbol'] ?? 'Rp';
+                final converted = item['totalConverted'] ?? 0.0;
 
-          final items = box.values.toList().reversed.toList();
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index] as Map;
-              final total = item['total'] ?? 0;
-              final metode = item['method'] ?? '-';
-              final tanggal = item['tanggal'] ?? '';
-
-              return Card(
-                elevation: 3,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                child: ListTile(
-                  leading: const Icon(
-                    Icons.receipt_long,
-                    color: Colors.blueAccent,
+                return Card(
+                  elevation: 3,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  title: Text(
-                    'Total: Rp ${NumberFormat('#,###').format(total)}',
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  child: ListTile(
+                    leading: const Icon(
+                      Icons.receipt_long,
+                      color: Colors.blueAccent,
+                    ),
+                    title: Text(
+                      'Total: Rp ${NumberFormat('#,###').format(total)}',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      'Metode: $metode\nTanggal: $tanggal'
+                      '${currency != 'IDR' ? '\n${symbol} ${converted.toStringAsFixed(2)} ($currency)' : ''}',
+                    ),
                   ),
-                  subtitle: Text('Metode: $metode\nTanggal: $tanggal'),
-                ),
-              );
-            },
-          );
-        },
-      ),
+                );
+              },
+            ),
     );
   }
 }

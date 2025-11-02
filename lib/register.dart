@@ -20,6 +20,7 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _showPassword = false;
   bool _showConfirmPassword = false;
 
+  
   void registerUser() async {
     final box = Hive.box('users');
 
@@ -59,30 +60,74 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // Buat salt + hash
+    
     final salt = generateSalt();
     final passwordHash = hashPassword(password, salt);
 
+    
     await box.put(email, {
       'username': username,
+      'email': email, 
       'passwordHash': passwordHash,
       'salt': salt,
     });
 
+   
+    print('📦 Data Hive (users): ${box.toMap()}');
+
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Registrasi berhasil! Silakan login.')),
+      const SnackBar(
+        content: Text('Registrasi berhasil! Silakan login.'),
+        backgroundColor: Colors.green,
+      ),
     );
 
+   
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const LoginPage()),
     );
   }
 
+  
+  void lihatDataHive() {
+    final box = Hive.box('users');
+    final data = box.toMap();
+    if (data.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Database masih kosong.'),
+          backgroundColor: Colors.orangeAccent,
+        ),
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('📦 Data di Hive (users)'),
+          content: SingleChildScrollView(child: Text(data.toString())),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Tutup'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Register')),
+      appBar: AppBar(
+        title: const Text(
+          'Register Akun',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.black,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: SingleChildScrollView(
@@ -140,9 +185,22 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ),
               const SizedBox(height: 25),
-              ElevatedButton(
-                onPressed: registerUser,
-                child: const Text('Daftar'),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: registerUser,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text(
+                    'Daftar',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ),
               ),
               const SizedBox(height: 10),
               TextButton(
@@ -153,6 +211,15 @@ class _RegisterPageState extends State<RegisterPage> {
                   );
                 },
                 child: const Text('Sudah punya akun? Login di sini'),
+              ),
+              const SizedBox(height: 10),
+             
+              TextButton(
+                onPressed: lihatDataHive,
+                child: const Text(
+                  'Lihat Data Hive (Debug)',
+                  style: TextStyle(color: Colors.grey),
+                ),
               ),
             ],
           ),
