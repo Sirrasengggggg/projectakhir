@@ -132,7 +132,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
                     ),
                     subtitle: Text(
                       'Metode: $metode\nTanggal: $tanggal'
-                      '${currency != 'IDR' ? '\n${symbol} ${converted.toStringAsFixed(2)} ($currency)' : ''}',
+                      '${currency != 'IDR' ? '\n$symbol ${converted.toStringAsFixed(2)} ($currency)' : ''}',
                     ),
                   ),
                 );

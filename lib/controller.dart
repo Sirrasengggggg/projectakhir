@@ -169,7 +169,7 @@ class _ControllerPageState extends State<ControllerPage> {
               ),
               value: _notifikasiAktif,
               onChanged: _toggleNotifikasi,
-              activeColor: Colors.black,
+              activeThumbColor: Colors.black,
             ),
             const SizedBox(height: 20),
 

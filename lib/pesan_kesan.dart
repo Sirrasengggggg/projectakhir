@@ -44,8 +44,10 @@ class PesanKesanPage extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Mata kuliah ini memberikan banyak ilmu tentang Flutter dan pengembangan aplikasi mobile modern. '
-              'Dosen mengajarkan dengan cara yang mudah dipahami dan aplikatif.',
+              'Secara keseluruhan, mata kuliah ini benar-benar mantap! Rasanya menantang banget, tapi juga seru. Terima kasih banyak buat teman-teman seperjuangan yang rela begadang bareng ngerjain tugas sampai pagi  entah itu pas diskusi di Discord atau nongkrong di mato.'
+              'Jujur, ngerjain tugasnya beneran nguras tenaga. Kadang sampai tidur nggak nyenyak, mandi  nggak basah karena pikiran masih muter di notifikasi yang ga muncul-muncul, haha. Tapi di balik semua capek itu, rasanya puas banget.'
+              'Momen paling bikin senang tuh waktu fitur yang kita bikin akhirnya bisa jalan. Perasaannya tuh kayak lihat Arsenal angkat piala UCL meskipun cuma di mimpi, tapi bahagianya sama!',
+
               style: TextStyle(
                 fontSize: 16,
                 height: 1.5,
@@ -59,8 +61,8 @@ class PesanKesanPage extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Menyenangkan dan penuh tantangan! Saya jadi lebih semangat untuk membuat aplikasi mobile sendiri '
-              'dan memahami proses pengembangan dari UI hingga backend.',
+              'Semoga ke depannya bisa lebih baik lagi! Jangan suka nunda-nunda tugas, sekecil apa pun itu karena kalau udah numpuk, rasanya kayak debug error yang nggak kelar-kelar . '
+              'Terus, semoga bisa lebih rajin explore tentang Flutter dan dependency kesayangan biar makin jago bikin aplikasi yang keren dan efisien. Pokoknya, tetap semangat belajar dan jangan takut coba hal baru!',
               style: TextStyle(
                 fontSize: 16,
                 height: 1.5,

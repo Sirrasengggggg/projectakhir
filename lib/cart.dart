@@ -314,7 +314,7 @@ class _CartPageState extends State<CartPage> {
                       ),
                       if (selectedCurrency != 'IDR')
                         Text(
-                          '${_getSymbol(selectedCurrency)} ${totalKonversi.toStringAsFixed(2)} (${selectedCurrency})',
+                          '${_getSymbol(selectedCurrency)} ${totalKonversi.toStringAsFixed(2)} ($selectedCurrency)',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
