@@ -1,18 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http; // Import package http
-import 'dart:convert'; // Import untuk json.decode
-import 'Model_Komputer.dart'; // <-- PERBAIKAN: Nama file disesuaikan
+import 'package:http/http.dart' as http;
+import 'model_Komputer.dart'; // pastikan file model sesuai
 
-class ProdukPage extends StatefulWidget {
-  const ProdukPage({super.key});
+class ListKomputer extends StatefulWidget {
+  const ListKomputer({super.key});
 
   @override
-  State<ProdukPage> createState() => _ProdukPageState();
+  State<ListKomputer> createState() => _ListKomputerState();
 }
 
-class _ProdukPageState extends State<ProdukPage> {
+class _ListKomputerState extends State<ListKomputer> {
   late Future<List<Computer>> _computersFuture;
-  // PASTIKAN URL API INI BENAR
   final String _apiUrl = "https://computers-shop.vercel.app/computers";
 
   @override
@@ -26,59 +24,53 @@ class _ProdukPageState extends State<ProdukPage> {
       final response = await http.get(Uri.parse(_apiUrl));
 
       if (response.statusCode == 200) {
-        // Menggunakan fungsi computerFromJson dari model Anda
         return computerFromJson(response.body);
       } else {
-        throw Exception(
-          'Gagal memuat data komputer. Status code: ${response.statusCode}',
-        );
+        throw Exception('Gagal memuat data komputer. (${response.statusCode})');
       }
     } catch (e) {
-      // Tambahkan penanganan error yang lebih spesifik
       debugPrint('Error fetching computers: $e');
       throw Exception('Gagal terhubung ke server: $e');
     }
   }
 
-  // Fungsi untuk format harga
   String _formatPrice(int price) {
-    return 'Rp ${price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
+    return 'Rp ${price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Halaman Produk')),
+      appBar: AppBar(
+        title: const Text('Daftar Produk Komputer'),
+        centerTitle: true,
+      ),
       body: FutureBuilder<List<Computer>>(
         future: _computersFuture,
         builder: (context, snapshot) {
-          // Saat loading
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
-          }
-          // Jika ada error
-          else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          // Jika data sukses didapat
-          else if (snapshot.hasData) {
+          } else if (snapshot.hasError) {
+            return Center(
+              child: Text(
+                'Terjadi kesalahan:\n${snapshot.error}',
+                textAlign: TextAlign.center,
+              ),
+            );
+          } else if (snapshot.hasData) {
             final computers = snapshot.data!;
-            // Jika tidak ada data
             if (computers.isEmpty) {
-              return const Center(child: Text('Tidak ada produk.'));
+              return const Center(child: Text('Tidak ada produk komputer.'));
             }
 
-            // Tampilkan list data
             return ListView.builder(
-              padding: const EdgeInsets.all(8.0), // Beri padding pada list
+              padding: const EdgeInsets.all(8.0),
               itemCount: computers.length,
               itemBuilder: (context, index) {
                 final computer = computers[index];
                 return Card(
-                  margin: const EdgeInsets.only(
-                    bottom: 12.0,
-                  ), // Beri jarak antar card
-                  clipBehavior: Clip.antiAlias, // Untuk memotong gambar
+                  margin: const EdgeInsets.only(bottom: 12.0),
+                  clipBehavior: Clip.antiAlias,
                   elevation: 4,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -86,29 +78,20 @@ class _ProdukPageState extends State<ProdukPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Tampilkan Gambar
                       Image.network(
                         computer.imageUrl,
-                        height: 160, // Beri ketinggian tetap
-                        fit: BoxFit.cover, // Agar gambar pas
-                        // Tampilkan loading saat gambar dimuat
+                        height: 160,
+                        fit: BoxFit.cover,
                         loadingBuilder: (context, child, loadingProgress) {
                           if (loadingProgress == null) return child;
                           return Container(
                             height: 160,
                             color: Colors.grey[200],
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                value:
-                                    loadingProgress.expectedTotalBytes != null
-                                    ? loadingProgress.cumulativeBytesLoaded /
-                                          loadingProgress.expectedTotalBytes!
-                                    : null,
-                              ),
+                            child: const Center(
+                              child: CircularProgressIndicator(),
                             ),
                           );
                         },
-                        // Tampilkan icon error jika gambar gagal dimuat
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
                             height: 160,
@@ -121,7 +104,6 @@ class _ProdukPageState extends State<ProdukPage> {
                           );
                         },
                       ),
-                      // Tampilkan Detail Teks
                       Padding(
                         padding: const EdgeInsets.all(12.0),
                         child: Column(
@@ -137,12 +119,8 @@ class _ProdukPageState extends State<ProdukPage> {
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 4),
-                            //
-                            // DI SINI PERBAIKANNYA:
-                            // Menggunakan computer.type, bukan specifications
-                            //
                             Text(
-                              computer.type, // Menampilkan tipe
+                              computer.type,
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey[600],
@@ -150,18 +128,13 @@ class _ProdukPageState extends State<ProdukPage> {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            //
-                            // DI SINI PERBAIKANNYA:
-                            // Menggunakan computer.description
-                            //
                             Text(
-                              computer.description, // Menampilkan deskripsi
+                              computer.description,
                               style: const TextStyle(fontSize: 14),
                               maxLines: 3,
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 12),
-                            // Menampilkan harga
                             Text(
                               _formatPrice(computer.price),
                               style: TextStyle(
@@ -178,10 +151,8 @@ class _ProdukPageState extends State<ProdukPage> {
                 );
               },
             );
-          }
-          // Jika tidak ada data (snapshot.hasData == false)
-          else {
-            return const Center(child: Text('Tidak ada data komputer.'));
+          } else {
+            return const Center(child: Text('Tidak ada data.'));
           }
         },
       ),

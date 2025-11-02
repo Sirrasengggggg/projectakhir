@@ -1,121 +1,74 @@
+// lib/profile.dart
 import 'package:flutter/material.dart';
+import 'riwayat_page.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'loginpage.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
+  Future<void> _logout(BuildContext context) async {
+    final session = Hive.box('session');
+    await session.clear();
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
-        title: Text('Profile', style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Profil Saya',
+          style: TextStyle(color: Colors.white,fontSize: 17,fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.grey,
+        
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              // Add top spacing here
-              SizedBox(height: 20), // You can adjust this value
-              
-              // Profile Picture
-              CircleAvatar(
-                radius: 60,
-                backgroundColor: Colors.grey[300],
-                child: Icon(Icons.person, size: 60, color: Colors.grey[600]),
-              ),
-              SizedBox(height: 24),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const CircleAvatar(
+              radius: 50,
+              backgroundColor: Colors.blueAccent,
+              child: Icon(Icons.person, color: Colors.white, size: 50),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'DigiSentral Member',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 40),
 
-              // Profile Details Card
-              Card(
-                elevation: 4,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildProfileItem(
-                        icon: Icons.person,
-                        title: 'Nama',
-                        content: 'Oktriadi Ramadhanu',
-                      ),
-                      _buildDivider(),
-                      _buildProfileItem(
-                        icon: Icons.calendar_today,
-                        title: 'Tempat, Tanggal Lahir',
-                        content: 'Tanjungpinang, 28 Oktober 2005',
-                      ),
-                      _buildDivider(),
-                      _buildProfileItem(
-                        icon: Icons.school,
-                        title: 'Kampus',
-                        content:
-                            'Universitas Pembangunan Nasional "Veteran" Yogyakarta',
-                      ),
-                      _buildDivider(),
-                      _buildProfileItem(
-                        icon: Icons.code,
-                        title: 'Jurusan',
-                        content: 'Sistem Informasi',
-                      ),
-                      _buildDivider(),
-                      _buildProfileItem(
-                        icon: Icons.sports_esports,
-                        title: 'Hobi',
-                        content: 'Gaming, Coding, Music',
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+            // Tombol riwayat pembelian
+            ListTile(
+              leading: const Icon(Icons.receipt_long, color: Colors.blueAccent),
+              title: const Text('Riwayat Pembelian'),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RiwayatPage()),
+                );
+              },
+            ),
+            const Divider(),
 
-              // Version Info
-              SizedBox(height: 24),
-              Text(
-                'DigiSentral v1.0.0',
-                style: TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-            ],
-          ),
+            // Tombol logout
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.redAccent),
+              title: const Text('Keluar'),
+              onTap: () => _logout(context),
+            ),
+          ],
         ),
       ),
     );
-  }
-
-  Widget _buildProfileItem({
-    required IconData icon,
-    required String title,
-    required String content,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 24, color: Colors.blue),
-          SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  content,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDivider() {
-    return Divider(color: Colors.grey[300], thickness: 1, height: 24);
   }
 }

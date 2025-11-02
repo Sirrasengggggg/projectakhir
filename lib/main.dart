@@ -1,34 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'loginpage.dart';
+import 'homepage.dart';
 
-// 1. Import LoginPage Anda
-// Pastikan path ini benar sesuai struktur proyek Anda
-import 'package:projectakhir/LoginPage.dart';
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
 
-// 2. Import file baru Anda yang sudah digabung
-// (Meskipun tidak dipanggil di sini, ini untuk memastikan semua terhubung)
-import 'package:projectakhir/homepage.dart';
+  await Hive.openBox('users'); // ✅ untuk user login
+  await Hive.openBox('session'); // ✅ untuk session aktif
+  await Hive.openBox('history'); // ✅ tambahkan ini untuk riwayat pembelian
 
-void main() {
-  runApp(const MyApp());
+  // Cek session
+  final session = Hive.box('session');
+  final savedEmail = session.get('email') as String?;
+  final savedUsername = session.get('username') as String?;
+
+  runApp(
+    MyApp(
+      initialUsername: (savedEmail != null && savedUsername != null)
+          ? savedUsername
+          : null,
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final String? initialUsername;
+  const MyApp({super.key, this.initialUsername});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Toko Komputer',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-
-      // 3. Mulai aplikasi dari LoginPage
-      // Ini adalah halaman awal aplikasi Anda
-      home: LoginPage(),
-
-      debugShowCheckedModeBanner: false, // Menghilangkan banner debug
+      debugShowCheckedModeBanner: false,
+      title: 'DigiSentral',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: (initialUsername != null)
+          ? HomePage(username: initialUsername!)
+          : const LoginPage(),
     );
   }
 }
